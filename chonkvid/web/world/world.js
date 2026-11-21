@@ -75,8 +75,10 @@
     picking: false, virus: VIRUSES[0], policy: "none", k: 8,
     hover: null, caseFilter: null, milestones: new Set(), runEnded: false,
     risk: null, showRisk: true,
+    fc: null, fcChecks: [], fcNews: new Set(), fcWarned: false, // Timestral outbreak forecast
     startDate: new Date(),
   };
+  const FC_NEWS_DAYS = [2, 5]; // forecasts announced in the news ticker (match FORECAST_CHECK_TICKS)
 
   // ------------------------------------------------------------------ canvas + projection
   const base = $("base"), fx = $("fx");
@@ -332,6 +334,7 @@
     S.cat = {}; S.prevCat = {}; S.catAt = {}; S.patientZero = null; S.tick = 0; S.history = []; S.peak = 0;
     S.countryTint = new Map(); S.countryFirst = new Set(); S.arcs = []; S.ripples = []; S.milestones = new Set();
     S.runEnded = false; S.caseFilter = null;
+    S.fc = null; S.fcChecks = []; S.fcNews = new Set(); S.fcWarned = false;
     for (const a of S.agents) { S.phase[a.id] = "S"; S.cat[a.id] = S.prevCat[a.id] = "N"; S.catAt[a.id] = 0; }
     $("cases").innerHTML = ""; $("who").innerHTML = `<div class="empty">${$("who-on").checked ? "Le Chonk's situation reports appear here during a run." : "Turn on WHO briefings in Setup to get Le Chonk's situation reports."}</div>`;
     $("case-filter").textContent = "Every infection and every resisted exposure, newest first. Click an agent on the map to filter.";
@@ -458,14 +461,23 @@
   }
 
   // ------------------------------------------------------------------ event playback
-  function enqueue(ev) { S.queue.push(ev); if (!S.timer) pump(); }
+  function enqueue(ev) {
+    // A live forecast lands ~0.4 s after its tick, while playback is pausing on that
+    // day: show it now instead of a full pause later, if nothing is queued ahead of it.
+    if (ev.type === "forecast" && S.timer && !S.queue.length && S.tick >= ev.tick) { apply(ev); return; }
+    S.queue.push(ev); if (!S.timer) pump();
+  }
   function pump() {
     S.timer = null;
     if (S.speed === 0) return;
     while (S.queue.length) {
       const ev = S.queue.shift();
       apply(ev);
-      if (ev.type === "tick" && ev.phase === "resolved") { S.timer = setTimeout(pump, 1700 / S.speed); return; }
+      if (ev.type === "tick" && ev.phase === "resolved") {
+        // Replays queue everything up front: draw this day's forecast with the day itself.
+        while (S.queue.length && S.queue[0].type === "forecast" && S.queue[0].tick === ev.tick) apply(S.queue.shift());
+        S.timer = setTimeout(pump, 1700 / S.speed); return;
+      }
       if (ev.type === "tick" && ev.phase === "exposed") { S.timer = setTimeout(pump, 1000 / S.speed); return; }
     }
   }
@@ -572,6 +584,20 @@
         if (first) headline(`WHO: ${first.slice(0, 140)}`, true);
         break;
       }
+      case "forecast": {
+        S.fc = ev;
+        drawCurve();
+        if (FC_NEWS_DAYS.includes(ev.tick) && !S.fcNews.has(ev.tick)) {
+          S.fcNews.add(ev.tick);
+          const p = fcPrediction(ev);
+          if (p) headline(`Timestral forecast: about ${Math.round(p.rate * 100)}% of agents infected by day ${p.day}`, true);
+        }
+        break;
+      }
+      case "forecast_check": S.fcChecks.push(ev); break;
+      case "forecast_error":
+        if (!S.fcWarned) { S.fcWarned = true; toast(`Timestral forecast off: ${ev.message}`, true); }
+        break;
       case "end": showEnd(ev); break;
       case "recorded": loadRuns(ev.id); loadRisk(); break;
       case "error": toast(ev.message); stopRun(); break;
@@ -647,7 +673,8 @@
     g.clearRect(0, 0, w, h);
     const pad = { l: 28, r: 8, t: 10, b: 20 };
     const n = S.agents.length || 1;
-    const days = Math.max(+$("ticks").value || 12, S.history.length ? S.history[S.history.length - 1].tick : 0);
+    const days = Math.max(+$("ticks").value || 12, S.history.length ? S.history[S.history.length - 1].tick : 0,
+                          S.fc ? S.fc.ticks[S.fc.ticks.length - 1] : 0);
     const X = (t) => pad.l + ((w - pad.l - pad.r) * t) / Math.max(1, days);
     const Y = (v) => h - pad.b - ((h - pad.t - pad.b) * v) / n;
     g.font = "11px Inter, sans-serif"; g.fillStyle = "#8aa4b8"; g.strokeStyle = "rgba(255,255,255,.07)";
@@ -673,6 +700,60 @@
       g.globalAlpha = k === "I" ? 0.95 : 0.75; g.fill(); g.globalAlpha = 1;
       lower = upper;
     }
+    drawForecast(g, X, Y, w, pad, n);
+  }
+
+  // Timestral forecast over the stacked curve. Infected is the bottom layer, so its
+  // band sits on the same scale as the real counts. "Total infected" = n - S (every
+  // agent the virus ever reached and spread from), drawn as a dotted line.
+  function drawForecast(g, X, Y, w, pad, n) {
+    const fc = S.fc, last = S.history[S.history.length - 1];
+    if (!fc || !last || !fc.I || !fc.S) return;
+    const idx = fc.ticks.map((t, i) => i).filter((i) => fc.ticks[i] > last.tick);
+    if (!idx.length) return;
+    const ts = [last.tick, ...idx.map((i) => fc.ticks[i])];
+    const pick = (arr, now) => [now, ...idx.map((i) => arr[i])];
+    const iLo = pick(fc.I.p10, last.I), iMid = pick(fc.I.p50, last.I), iHi = pick(fc.I.p90, last.I);
+    const ever = pick(fc.S.p50.map((s) => n - s), last.I + last.E + last.R);
+
+    // "now" divider
+    g.save();
+    g.strokeStyle = "rgba(255,255,255,.18)"; g.setLineDash([2, 3]); g.lineWidth = 1;
+    g.beginPath(); g.moveTo(X(last.tick), pad.t); g.lineTo(X(last.tick), Y(0)); g.stroke();
+
+    // infected: 10-90% band + dashed median
+    g.setLineDash([]);
+    g.beginPath();
+    ts.forEach((t, i) => (i ? g.lineTo(X(t), Y(iHi[i])) : g.moveTo(X(t), Y(iHi[i]))));
+    for (let i = ts.length - 1; i >= 0; i--) g.lineTo(X(ts[i]), Y(iLo[i]));
+    g.closePath(); g.fillStyle = COLOR.I; g.globalAlpha = 0.22; g.fill(); g.globalAlpha = 1;
+    const line = (vals, color, dash, width) => {
+      g.beginPath(); ts.forEach((t, i) => (i ? g.lineTo(X(t), Y(vals[i])) : g.moveTo(X(t), Y(vals[i]))));
+      g.setLineDash(dash); g.strokeStyle = color; g.lineWidth = width; g.stroke();
+    };
+    line(iMid, "rgba(0,0,0,.55)", [], 3.5);          // dark outline keeps it readable over the stack
+    line(iMid, COLOR.I, [5, 4], 2);
+    line(ever, "rgba(232,241,248,.85)", [1.5, 3], 1.6);
+
+    // legend on a dark backing box so it stays readable over the stacked colours
+    g.setLineDash([]);
+    g.font = "10.5px Inter, sans-serif"; g.textAlign = "left";
+    const rows = [["Timestral forecast · 80% band", "#cfe0ee"], ["– – infected", COLOR.I], ["··· total infected", "#e8f1f8"]];
+    const bw = Math.max(...rows.map(([t]) => g.measureText(t).width)) + 14, bh = rows.length * 13 + 8;
+    const bx = w - pad.r - bw - 2, by = pad.t + 2;
+    g.fillStyle = "rgba(11,22,34,.86)"; g.strokeStyle = "rgba(63,122,163,.6)"; g.lineWidth = 1;
+    g.beginPath(); g.roundRect ? g.roundRect(bx, by, bw, bh, 4) : g.rect(bx, by, bw, bh); g.fill(); g.stroke();
+    rows.forEach(([t, c], i) => { g.fillStyle = c; g.fillText(t, bx + 7, by + 14 + i * 13); });
+    g.restore();
+  }
+
+  // Predicted attack rate at the last forecast day: (n - S - patient zero) / (n - 1),
+  // the same definition the end screen and the server's forecast check use.
+  function fcPrediction(fc) {
+    const n = S.agents.length;
+    if (!fc || !fc.S || !fc.ticks.length || n < 2) return null;
+    const j = fc.ticks.length - 1;
+    return { day: fc.ticks[j], rate: Math.max(0, (n - fc.S.p50[j] - 1) / (n - 1)) };
   }
 
   // ------------------------------------------------------------------ frame loop
@@ -977,8 +1058,25 @@
       : `Live run on ${(S.status && S.status.models.agent) || "Mistral"}. Every infection after patient zero is a real model reply that carried the payload on.`;
     const vnote = S.virus.live ? "" : ` ${S.virus.name} sets the contact pattern only; the spread itself was measured with the ChonkVid chain letter, as ${S.virus.name}'s own test payload is still to come.`;
     $("end-note").textContent = `${src}${vnote} ${ev.usage ? `${ev.usage.chat_calls} model calls.` : ""}`;
+    renderForecastVerdict();
     headline(`Outbreak over: ${Math.round(rate * 100)}% of agents infected`, true);
     setTimeout(() => { if (S.runEnded) $("end").classList.remove("hidden"); }, 1400 / Math.max(1, S.speed));
+  }
+
+  // "Timestral called 42% on day 2 and 34% on day 5; actual 85%."
+  function renderForecastVerdict() {
+    const el = $("end-forecast");
+    const checks = [...S.fcChecks].sort((a, b) => a.made_at - b.made_at);
+    if (!checks.length) { el.classList.add("hidden"); el.innerHTML = ""; return; }
+    const pctOf = (x) => `${Math.round(x * 100)}%`;
+    const calls = checks.map((c) => `<b>${pctOf(c.pred_attack_rate)}</b> on day ${c.made_at}`);
+    const said = calls.length > 1 ? `${calls.slice(0, -1).join(", ")} and ${calls[calls.length - 1]}` : calls[0];
+    const c0 = checks[checks.length - 1];
+    const detail = checks.map((c) => `day ${c.made_at}: off by ${Number(c.mae_agents).toFixed(1)} agents on average, ` +
+      `real curve inside the 80% band ${pctOf(c.coverage_80)} of the time`).join(" · ");
+    el.innerHTML = `Timestral forecast called ${said}; actual <b>${pctOf(c0.actual_attack_rate)}</b> by day ${c0.final_tick}.` +
+      `<small>${esc(detail)}. Model ${esc(c0.model)}, Mistral's time-series forecaster, run locally.</small>`;
+    el.classList.remove("hidden");
   }
 
   async function loadRuns(select) {

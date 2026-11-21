@@ -286,6 +286,10 @@ body.picking #fx { cursor: crosshair; }
 .end-stats .v { font-family: var(--font-hud); font-weight: 700; font-size: 28px; }
 .end-stats .k { font-size: 12px; color: var(--muted); }
 .end-note { color: var(--muted); font-size: 13.5px; line-height: 1.45; margin: 14px 0 0; }
+.end-forecast { color: var(--ink); font-size: 14px; line-height: 1.45; margin: 14px 0 0; text-align: left;
+  padding: 8px 12px; border-left: 3px solid var(--c-inf); background: rgba(255,42,42,.06); border-radius: 0 6px 6px 0; }
+.end-forecast b { font-family: var(--font-hud); font-size: 16px; }
+.end-forecast small { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
 .end-card .intro-actions { justify-content: center; }
 
 .agent-card { position: fixed; z-index: 35; width: 300px; border-radius: 8px; padding: 12px; font-size: 13px; }
