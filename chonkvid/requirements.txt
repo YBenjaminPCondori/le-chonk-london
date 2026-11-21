@@ -12,3 +12,5 @@ pglast>=6
 mistralai-agents>=1.1.3   # WHO as a Mistral Managed Agent (optional: falls back to chat)
 psycopg[binary]>=3.2      # optional Supabase Postgres persistence (DATABASE_URL)
 mcp>=2.3                  # ChonkVid MCP server for Mistral Vibe (python -m chonkvid mcp)
+# optional: Timestral outbreak forecast (FORECAST=1). Not pinned here to keep installs light:
+#   pip install torch https://github.com/mistralai/timestral/archive/refs/heads/main.zip

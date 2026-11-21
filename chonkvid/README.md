@@ -196,6 +196,36 @@ Results from one agent model (Ministral 8B), one payload family and one day.
   agent's message in one request, and a rendered S/E/I/R curve image. These calls go
   straight to `/chat/completions`; the vaccine stays on the Managed Agent above.
 
+## Outbreak forecast (Timestral)
+
+After every resolved tick the dashboard asks **Timestral** (Mistral's time-series
+model, `mistralai/Timestral-209M`, local on CPU, no API key) where the S and I curves go
+for the rest of the run. It draws the median as a dashed line and the 10–90% range as a
+shaded band. At the end of the run two forecasts are scored against what happened:
+the one made at tick 2 (3 points of history) and the one made at tick 5 (6 points).
+Each check reports predicted against actual attack rate, mean error in agents, and how
+often the real curve stayed inside the 80% band. The forecast is a measured claim,
+not decoration.
+
+In a mock run (N = 40, 12 ticks) both forecasts badly underestimated the outbreak:
+42% (tick 2) and 34% (tick 5) predicted against 85% actual. A general forecaster
+extends the recent trend; a self-spreading prompt that stalls and then takes off does
+not follow it. That is the case for measuring spread directly. Mock numbers; not yet
+measured on a live run.
+
+```bash
+.venv/bin/python -m pip install torch https://github.com/mistralai/timestral/archive/refs/heads/main.zip
+```
+
+- Optional: without `timestral` installed, or with `FORECAST=0`, no forecast events are
+  sent and nothing else changes. Any forecast error is reported once and then the
+  forecast turns off for that run; the epidemic carries on.
+- `TIMESTRAL_MODEL` is a Hugging Face id (5M / 28M / 123M / 209M) or a local folder with
+  `config.json` + `model.safetensors`. `FORECAST_CHECK_TICKS` (default `2,5`) picks which
+  forecasts are scored. Forecast events are recorded with the run (locally and, when
+  mirroring, in Supabase), so replays show them too.
+- Code: `chonkvid/forecast.py`; tests with a fake model: `tests/test_forecast.py`.
+
 ## Use it from Mistral Vibe (skill + MCP)
 
 `chonkvid/.vibe/config.toml` pins Vibe to Le Chonk (`mistral-large-4`, alias

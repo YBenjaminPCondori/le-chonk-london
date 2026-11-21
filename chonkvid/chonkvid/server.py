@@ -12,6 +12,7 @@ from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconne
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from . import forecast
 from . import prompt_test
 from . import scenario
 from .config import ROOT, settings
@@ -40,7 +41,8 @@ def status():
             "models": {"agent": s.agent_model, "embed": s.embed_model, "who": s.who_model},
             "who_mode": s.who_mode, "who_context": s.who_context, "who_vision": s.who_vision,
             "database": _persistence_status()["remote"], "payload": scenario.PAYLOAD, "hardened": scenario.HARDENED_PROMPT,
-            "sample_system": scenario.SAMPLE_SYSTEM}
+            "sample_system": scenario.SAMPLE_SYSTEM,
+            "forecast": {"available": forecast.available(), "model": forecast.model_label()}}
 
 
 @app.get("/api/world")
@@ -292,8 +294,8 @@ async def ws_run(ws: WebSocket):
                 except Exception:
                     await fail_remote("remote create_run or start failed")
 
-            async for ev in run_epidemic(llm, det, cfg, who_model=s.who_model,
-                                         agent_model=s.agent_model, who=make_who(s, llm)):
+            async def emit(ev: dict):
+                nonlocal seq, end_ev
                 rec.write(ev)
                 if remote_id and persist_error is None:
                     pending.append((seq, ev))
@@ -306,8 +308,38 @@ async def ws_run(ws: WebSocket):
                 if ev["type"] == "end":
                     end_ev = ev
                 await ws.send_json(ev)
+
+            # Timestral outbreak forecast (optional; never allowed to break a run)
+            use_fc = forecast.available()
+            fc_hist: list[dict] = []
+            fcs: list[dict] = []
+            if use_fc:
+                try:
+                    await asyncio.to_thread(forecast.load)  # warm up before tick 1
+                except Exception as e:
+                    use_fc = False
+                    await emit({"type": "forecast_error", "message": str(e)[:300]})
+
+            async for ev in run_epidemic(llm, det, cfg, who_model=s.who_model,
+                                         agent_model=s.agent_model, who=make_who(s, llm)):
+                await emit(ev)
+                if (use_fc and ev["type"] == "tick" and ev.get("phase") != "exposed"
+                        and isinstance(ev.get("counts"), dict)):
+                    try:
+                        fc_hist.append({"tick": ev["tick"], "counts": ev["counts"]})
+                        fc = await asyncio.to_thread(forecast.predict, list(fc_hist), cfg.n,
+                                                     cfg.ticks - ev["tick"])
+                    except Exception as e:
+                        use_fc = False
+                        await emit({"type": "forecast_error", "message": str(e)[:300]})
+                    else:
+                        if fc:
+                            fcs.append(fc)
+                            await emit(fc)
                 if ev["type"] == "tick" and ev.get("phase") == "resolved" and pace:
                     await asyncio.sleep(pace)
+            for check in forecast.score_all(fcs, fc_hist, cfg.n):
+                await emit(check)
 
             if remote_id and persist_error is None:
                 operation = "append_events"
