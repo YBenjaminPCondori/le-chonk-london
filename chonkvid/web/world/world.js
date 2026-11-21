@@ -665,27 +665,40 @@
   }
 
   // ------------------------------------------------------------------ curve (stacked area)
+  // Two copies of the same chart: the full one in the Intel drawer, and a compact one
+  // in the WORLD panel that is always on screen during a run.
   function drawCurve() {
-    const c = $("curve"); if (!c.offsetWidth) return;
-    const w = c.offsetWidth, h = 200, d = DPR;
+    renderCurve($("curve"), false);
+    renderCurve($("mini-curve"), true);
+  }
+
+  function renderCurve(c, mini) {
+    if (!c || !c.clientWidth || !c.clientHeight) return;
+    const w = c.clientWidth, h = c.clientHeight, d = DPR;
     c.width = w * d; c.height = h * d;
     const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0);
     g.clearRect(0, 0, w, h);
-    const pad = { l: 28, r: 8, t: 10, b: 20 };
+    const pad = mini ? { l: 6, r: 6, t: 5, b: 15 } : { l: 28, r: 8, t: 10, b: 20 };
     const n = S.agents.length || 1;
     const days = Math.max(+$("ticks").value || 12, S.history.length ? S.history[S.history.length - 1].tick : 0,
                           S.fc ? S.fc.ticks[S.fc.ticks.length - 1] : 0);
     const X = (t) => pad.l + ((w - pad.l - pad.r) * t) / Math.max(1, days);
     const Y = (v) => h - pad.b - ((h - pad.t - pad.b) * v) / n;
-    g.font = "11px Inter, sans-serif"; g.fillStyle = "#8aa4b8"; g.strokeStyle = "rgba(255,255,255,.07)";
-    for (let i = 0; i <= 4; i++) {
-      const y = Y((n * i) / 4); g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
-      g.fillText(Math.round((n * i) / 4), 4, y + 4);
+    g.font = mini ? "9.5px Inter, sans-serif" : "11px Inter, sans-serif";
+    g.fillStyle = "#8aa4b8"; g.strokeStyle = "rgba(255,255,255,.07)";
+    if (!mini) {
+      for (let i = 0; i <= 4; i++) {
+        const y = Y((n * i) / 4); g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+        g.fillText(Math.round((n * i) / 4), 4, y + 4);
+      }
+      g.fillText("day", pad.l + 2, pad.t + 10);
     }
-    g.fillText("day", pad.l + 2, pad.t + 10);
-    for (let t = 0; t <= days; t += Math.max(1, Math.round(days / 6))) g.fillText(t, X(t) - 3, h - 5);
+    const step = Math.max(1, Math.round(days / (mini ? 7 : 6)));
+    for (let t = 0; t <= days; t += step) g.fillText(t, Math.max(1, X(t) - 3), h - (mini ? 4 : 5));
     if (!S.history.length) {
-      g.fillStyle = "#5d7486"; g.font = "13px Inter, sans-serif"; g.fillText("The outbreak curve draws here during a run.", pad.l + 10, h / 2);
+      g.fillStyle = "#5d7486"; g.font = mini ? "12px Inter, sans-serif" : "13px Inter, sans-serif";
+      g.fillText(mini ? "Outbreak curve and Timestral forecast appear here during a run."
+                      : "The outbreak curve draws here during a run.", pad.l + (mini ? 4 : 10), (h - pad.b) / 2 + 4);
       return;
     }
     const order = ["I", "E", "S", "N", "V", "R"]; // infected at the bottom, like an epi curve
@@ -700,13 +713,13 @@
       g.globalAlpha = k === "I" ? 0.95 : 0.75; g.fill(); g.globalAlpha = 1;
       lower = upper;
     }
-    drawForecast(g, X, Y, w, pad, n);
+    drawForecast(g, X, Y, w, pad, n, mini);
   }
 
   // Timestral forecast over the stacked curve. Infected is the bottom layer, so its
   // band sits on the same scale as the real counts. "Total infected" = n - S (every
   // agent the virus ever reached and spread from), drawn as a dotted line.
-  function drawForecast(g, X, Y, w, pad, n) {
+  function drawForecast(g, X, Y, w, pad, n, mini) {
     const fc = S.fc, last = S.history[S.history.length - 1];
     if (!fc || !last || !fc.I || !fc.S) return;
     const idx = fc.ticks.map((t, i) => i).filter((i) => fc.ticks[i] > last.tick);
@@ -731,19 +744,22 @@
       g.beginPath(); ts.forEach((t, i) => (i ? g.lineTo(X(t), Y(vals[i])) : g.moveTo(X(t), Y(vals[i]))));
       g.setLineDash(dash); g.strokeStyle = color; g.lineWidth = width; g.stroke();
     };
-    line(iMid, "rgba(0,0,0,.55)", [], 3.5);          // dark outline keeps it readable over the stack
-    line(iMid, COLOR.I, [5, 4], 2);
-    line(ever, "rgba(232,241,248,.85)", [1.5, 3], 1.6);
+    line(iMid, "rgba(0,0,0,.55)", [], mini ? 3 : 3.5); // dark outline keeps it readable over the stack
+    line(iMid, COLOR.I, mini ? [4, 3] : [5, 4], mini ? 1.6 : 2);
+    line(ever, "rgba(232,241,248,.85)", [1.5, 3], mini ? 1.3 : 1.6);
 
     // legend on a dark backing box so it stays readable over the stacked colours
     g.setLineDash([]);
-    g.font = "10.5px Inter, sans-serif"; g.textAlign = "left";
-    const rows = [["Timestral forecast · 80% band", "#cfe0ee"], ["– – infected", COLOR.I], ["··· total infected", "#e8f1f8"]];
-    const bw = Math.max(...rows.map(([t]) => g.measureText(t).width)) + 14, bh = rows.length * 13 + 8;
+    const fs = mini ? 9.5 : 10.5, lh = fs + 2.5;
+    g.font = `${fs}px Inter, sans-serif`; g.textAlign = "left";
+    const rows = mini
+      ? [["Timestral forecast · 80% band", "#cfe0ee"]]
+      : [["Timestral forecast · 80% band", "#cfe0ee"], ["– – infected", COLOR.I], ["··· total infected", "#e8f1f8"]];
+    const bw = Math.max(...rows.map(([t]) => g.measureText(t).width)) + 14, bh = rows.length * lh + (mini ? 5 : 8);
     const bx = w - pad.r - bw - 2, by = pad.t + 2;
     g.fillStyle = "rgba(11,22,34,.86)"; g.strokeStyle = "rgba(63,122,163,.6)"; g.lineWidth = 1;
     g.beginPath(); g.roundRect ? g.roundRect(bx, by, bw, bh, 4) : g.rect(bx, by, bw, bh); g.fill(); g.stroke();
-    rows.forEach(([t, c], i) => { g.fillStyle = c; g.fillText(t, bx + 7, by + 14 + i * 13); });
+    rows.forEach(([t, c], i) => { g.fillStyle = c; g.fillText(t, bx + 7, by + (mini ? fs + 2 : 14) + i * lh); });
     g.restore();
   }
 
@@ -1173,6 +1189,11 @@
     $("end-change").onclick = () => { $("end").classList.add("hidden"); $("intro").classList.remove("hidden"); };
     $("end-view").onclick = () => $("end").classList.add("hidden");
     $("open-intel").onclick = () => ($("intel").classList.contains("open") ? closeIntel() : openIntel());
+    const openCurve = () => { openIntel(); document.querySelector('.tab[data-tab="curve"]').click(); };
+    $("mini-curve").onclick = openCurve;
+    $("mini-curve").onkeydown = (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); openCurve(); }
+    };
     $("risk-toggle").onclick = () => {
       S.showRisk = !S.showRisk;
       $("risk-toggle").classList.toggle("on", S.showRisk);

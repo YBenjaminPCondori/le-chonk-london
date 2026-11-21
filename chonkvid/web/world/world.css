@@ -171,6 +171,9 @@ body.picking #fx { cursor: crosshair; }
 .disease .btn { width: 100%; }
 
 .worldp { border-top: 2px solid var(--cyan); }
+.mini-curve { width: 100%; height: 92px; display: block; margin: 0 0 8px; cursor: pointer;
+  background: #050d15; border: 1px solid var(--edge); border-radius: 4px; }
+.mini-curve:hover, .mini-curve:focus-visible { border-color: var(--edge-hi); outline: none; }
 .stack { display: flex; height: 14px; border-radius: 3px; overflow: hidden; background: #050b11; border: 1px solid #000; }
 .stack span { height: 100%; transition: flex-grow .6s ease; min-width: 0; }
 .legend { list-style: none; margin: 9px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 12px; }
@@ -334,6 +337,7 @@ body.picking #fx { cursor: crosshair; }
   .panel { padding: 28px 10px 10px; }
   .legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .legend .num { font-size: 15px; }
+  .mini-curve { height: 60px; margin-bottom: 6px; }
   .cure-pct { font-size: 22px; }
   .dz-meta { display: none; }
   .virus-select { font-size: 15px; }
