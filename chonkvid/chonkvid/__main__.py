@@ -14,6 +14,37 @@ from .detect import Detector
 from .llm import make_llm
 
 
+def _port_free(host: str, port: int) -> bool:
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            s.bind((host, port))
+            return True
+        except OSError:
+            return False
+
+
+def _pick_port(host: str, port: int, strict: bool = False, span: int = 50) -> int:
+    """Return the requested port if free; otherwise the next free one above it.
+
+    Keeps a live demo from dying on 'address already in use' when a stale
+    server (or another app) is squatting the default port. Pass --strict-port
+    to disable and fail loudly instead.
+    """
+    if _port_free(host, port):
+        return port
+    if strict:
+        print(f"ERROR: port {port} is already in use (--strict-port set).", file=sys.stderr)
+        raise SystemExit(1)
+    for p in range(port + 1, port + 1 + span):
+        if _port_free(host, p):
+            print(f"  [port {port} busy -> using {p}]", flush=True)
+            return p
+    print(f"ERROR: no free port in {port}-{port + span}.", file=sys.stderr)
+    raise SystemExit(1)
+
+
 async def cmd_check(args) -> int:
     s = settings()
     print(f"mode: {s.mode}  (key {'present' if s.api_key else 'missing'})")
@@ -218,6 +249,8 @@ def main(argv=None) -> int:
     sv = sub.add_parser("serve", help="run the dashboard")
     sv.add_argument("--port", type=int, default=8000)
     sv.add_argument("--host", default="127.0.0.1")
+    sv.add_argument("--strict-port", action="store_true",
+                    help="fail if --port is taken instead of falling back to a free one")
     tp = sub.add_parser("test-prompt", help="measure a system prompt's spread; WHO writes a vaccine")
     tg = tp.add_mutually_exclusive_group(required=True)
     tg.add_argument("--file", help="path to a system prompt")
@@ -236,7 +269,10 @@ def main(argv=None) -> int:
         return 0
     if args.cmd == "serve":
         import uvicorn
-        uvicorn.run("chonkvid.server:app", host=args.host, port=args.port)
+        port = _pick_port(args.host, args.port, strict=args.strict_port)
+        print(f"\n  ChonkVid dashboard:  http://{args.host}:{port}", flush=True)
+        print(f"  World outbreak:      http://{args.host}:{port}/world\n", flush=True)
+        uvicorn.run("chonkvid.server:app", host=args.host, port=port)
         return 0
     if args.cmd == "estimate":
         return cmd_estimate(args)

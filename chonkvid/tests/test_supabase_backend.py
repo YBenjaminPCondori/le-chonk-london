@@ -563,10 +563,13 @@ def test_websocket_marks_run_failed_when_simulation_aborts(monkeypatch):
     assert fake.runs[rid].error_message
 
 
-def test_existing_endpoints_smoke(monkeypatch):
+def test_existing_endpoints_smoke(monkeypatch, tmp_path):
     from fastapi.testclient import TestClient
     from chonkvid import server
     monkeypatch.setattr(server, "get_store", lambda: LocalStore())
+    # Other tests in the same session may run an experiment that writes results;
+    # this smoke test checks the empty case, so give it its own results folder.
+    monkeypatch.setattr(server, "RESULTS", tmp_path)
     c = TestClient(server.app)
     assert c.get("/api/status").json()["mode"] == "mock"
     assert len(c.get("/api/world?n=12&seed=0").json()["nodes"]) == 12

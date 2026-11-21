@@ -1,0 +1,8 @@
+name = "chonkvid-app"
+main = "src/index.ts"
+compatibility_date = "2025-11-21"
+account_id = "cf7590968e7d3a54091b3a94df6f1506"
+workers_dev = true
+
+[observability]
+enabled = true

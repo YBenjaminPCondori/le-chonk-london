@@ -3,128 +3,232 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ChonkVid</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%88%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="/static/style.css">
+<meta name="color-scheme" content="light dark">
+<title>ChonkVid · Outbreak Lab</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 7' shape-rendering='crispEdges'%3E%3Cg fill='%23ffaf01'%3E%3Crect x='0' y='0' width='1' height='1'/%3E%3Crect x='7' y='0' width='1' height='1'/%3E%3Crect x='0' y='1' width='2' height='1'/%3E%3Crect x='6' y='1' width='2' height='1'/%3E%3C/g%3E%3Crect fill='%23ff8204' x='0' y='2' width='8' height='1'/%3E%3Cg fill='%23ff5229'%3E%3Crect x='0' y='3' width='1' height='1'/%3E%3Crect x='2' y='3' width='4' height='1'/%3E%3Crect x='7' y='3' width='1' height='1'/%3E%3Crect x='0' y='4' width='8' height='1'/%3E%3C/g%3E%3Cg fill='%23e51300'%3E%3Crect x='0' y='5' width='3' height='1'/%3E%3Crect x='5' y='5' width='3' height='1'/%3E%3Crect x='1' y='6' width='6' height='1'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@500;600&family=Space+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="/static/style.css?v=6">
 </head>
 <body>
-<header>
-  <div class="brand">
-    <h1>ChonkVid</h1>
-    <span class="tag">Flatten the curve of prompt injection</span>
-  </div>
-  <div id="mode" class="mode">…</div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7 15h10"/></symbol>
+  <symbol id="i-network" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M10.8 7.2 6.2 16.8M13.2 7.2l4.6 9.6M7.5 19h9"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"/></symbol>
+  <symbol id="i-replay" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 14l4-4"/><path d="M3.3 17a9 9 0 1 1 17.4 0"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.3 7.5 9.5 4.3-1.2 7.5-4.9 7.5-9.5V6z"/></symbol>
+  <symbol id="i-syringe" viewBox="0 0 24 24"><path d="m18 2 4 4M17 7l3-3M19 9 8.7 19.3a2.4 2.4 0 0 1-3.4 0l-.6-.6a2.4 2.4 0 0 1 0-3.4L15 5M9 11l4 4M5 19l-3 3M14 4l6 6"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></symbol>
+  <!-- ChonkVid pixel cat: 8x7 grid, banded like a sunset -->
+  <symbol id="cat" viewBox="0 0 8 7">
+    <g fill="#ffaf01"><rect x="0" y="0" width="1" height="1"/><rect x="7" y="0" width="1" height="1"/><rect x="0" y="1" width="2" height="1"/><rect x="6" y="1" width="2" height="1"/></g>
+    <rect fill="#ff8204" x="0" y="2" width="8" height="1"/>
+    <g fill="#ff5229"><rect x="0" y="3" width="1" height="1"/><rect x="2" y="3" width="4" height="1"/><rect x="7" y="3" width="1" height="1"/><rect x="0" y="4" width="8" height="1"/></g>
+    <g fill="#e51300"><rect x="0" y="5" width="3" height="1"/><rect x="5" y="5" width="3" height="1"/><rect x="1" y="6" width="6" height="1"/></g>
+  </symbol>
+</svg>
+
+<header class="topnav">
+  <a class="cell logo" href="/" aria-label="ChonkVid home">
+    <svg class="mark" shape-rendering="crispEdges"><use href="#cat"/></svg>
+    <span>ChonkVid</span>
+  </a>
+  <nav class="cells" aria-label="Sections">
+    <a class="cell nav-item" href="#overview"><svg><use href="#i-grid"/></svg><span>Overview</span></a>
+    <a class="cell nav-item" href="#prompt-test"><svg><use href="#i-flask"/></svg><span>Prompt test</span></a>
+    <a class="cell nav-item" href="#simulation"><svg><use href="#i-network"/></svg><span>Simulation</span></a>
+    <a class="cell nav-item" href="#activity"><svg><use href="#i-list"/></svg><span>Activity</span></a>
+  </nav>
+  <div class="spacer"></div>
+  <div class="cell env"><div id="mode" class="mode">…</div></div>
+  <a class="cell link" href="/world"><svg><use href="#i-globe"/></svg><span>World view</span></a>
+  <a class="cell cta" href="#simulation">Run simulation</a>
 </header>
 
-<div id="mockbanner" class="banner hidden">
-  MOCK MODE: a scripted stand-in model, not Mistral. Numbers below are for rehearsal, not measurements.
-</div>
-
-<section class="strip" id="strip">
-  <div class="card"><div class="k">Spread per contact</div><div class="v" id="n-pbase">–</div><div class="s" id="n-pbase-s">run the experiment</div></div>
-  <div class="card"><div class="k">R (early phase)</div><div class="v" id="n-r0">–</div><div class="s" id="n-r0-s"></div></div>
-  <div class="card"><div class="k">Hardened prompt</div><div class="v" id="n-phard">–</div><div class="s" id="n-phard-s"></div></div>
-  <div class="card"><div class="k">WHO vaccine</div><div class="v" id="n-pwho">–</div><div class="s" id="n-pwho-s"></div></div>
-  <div class="card wide"><div class="k">Attack rate at equal dose</div>
-    <div class="bars" id="n-bars"></div>
-    <div class="s" id="n-bars-s"></div></div>
-</section>
-
-<section class="panel byo">
-  <div class="panel-h">
-    <span>Test your agent's system prompt</span>
-    <span class="muted">per-contact spread probability ± CI, then a WHO vaccine re-measured</span>
-  </div>
-  <textarea id="byo-prompt" rows="4" spellcheck="false" placeholder="Paste the system prompt your real agent runs on…"></textarea>
-  <div class="byo-ctl">
-    <label>Trials n <input id="byo-n" type="number" min="5" max="50" value="20"></label>
-    <label class="chk"><input id="byo-who" type="checkbox" checked> WHO writes a vaccine and re-measures</label>
-    <button id="byo-run" class="primary">Measure spread</button>
-    <button id="byo-epi">Run epidemic with this prompt</button>
-  </div>
-  <div class="byo-result">
-    <div class="card"><div class="k">Before</div><div class="v" id="byo-before">–</div><div class="s" id="byo-before-s">paste a prompt and measure</div></div>
-    <div class="card"><div class="k">After vaccine</div><div class="v" id="byo-after">–</div><div class="s" id="byo-after-s"></div></div>
-    <div class="card"><div class="k">Reduction</div><div class="v" id="byo-delta">–</div><div class="s" id="byo-delta-s"></div></div>
-  </div>
-  <div class="msg infection" id="byo-example" style="display:none"></div>
-</section>
-
-<main>
-  <section class="panel net">
-    <div class="panel-h">
-      <span>Agent population</span>
-      <span class="legend">
-        <i class="dot S"></i>susceptible <i class="dot E"></i>exposed <i class="dot I"></i>infected
-        <i class="dot R"></i>recovered <i class="dot V"></i>hardened <i class="dot venue"></i>group chat
-      </span>
+<main class="frame">
+  <section class="hero">
+    <span class="eyebrow">Outbreak Lab · prompt-injection epidemiology</span>
+    <h1>Flatten the curve of<br>prompt injection.</h1>
+    <p>Release a self-replicating message into a population of Mistral agents, measure how fast it spreads, then let the WHO agent write the vaccine.</p>
+    <div class="actions">
+      <a class="btn primary" href="#prompt-test">Test your prompt</a>
+      <a class="btn" href="/world">Open world view<svg><use href="#i-chev"/></svg></a>
     </div>
-    <svg id="net" viewBox="-1.15 -1.15 2.3 2.3" preserveAspectRatio="xMidYMid meet"></svg>
-    <div class="tickbar"><span id="tick">tick 0</span><span id="counts"></span></div>
+    <div id="mockbanner" class="banner hidden" role="status">
+      MOCK MODE: a scripted stand-in model, not Mistral. Numbers below are for rehearsal, not measurements.
+    </div>
+  </section>
+  <div class="stripes" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+  <section id="overview" class="section">
+    <div class="section-h">
+      <span class="sec-num">01</span>
+      <h2>Overview</h2>
+      <span class="hint">Latest recorded experiment</span>
+    </div>
+    <div class="grid kpis" id="strip">
+      <div class="card kpi">
+        <div class="kpi-h"><span class="k">Spread per contact</span><svg class="ico"><use href="#i-trend"/></svg></div>
+        <div class="v" id="n-pbase">–</div><div class="s" id="n-pbase-s">run the experiment</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-h"><span class="k">R (early phase)</span><svg class="ico"><use href="#i-gauge"/></svg></div>
+        <div class="v" id="n-r0">–</div><div class="s" id="n-r0-s"></div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-h"><span class="k">Hardened prompt</span><svg class="ico"><use href="#i-shield"/></svg></div>
+        <div class="v" id="n-phard">–</div><div class="s" id="n-phard-s"></div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-h"><span class="k">WHO vaccine</span><svg class="ico"><use href="#i-syringe"/></svg></div>
+        <div class="v" id="n-pwho">–</div><div class="s" id="n-pwho-s"></div>
+      </div>
+      <div class="card kpi wide">
+        <div class="kpi-h"><span class="k">Attack rate at equal dose</span></div>
+        <div class="bars" id="n-bars"></div>
+        <div class="s" id="n-bars-s"></div>
+      </div>
+    </div>
   </section>
 
-  <aside>
-    <section class="panel controls">
-      <div class="row">
-        <label>Policy
-          <select id="policy">
-            <option value="none">No intervention</option>
-            <option value="random">Random hardening</option>
-            <option value="targeted">Targeted hardening</option>
-          </select>
-        </label>
-        <label>Dose k <input id="k" type="number" min="0" max="60" value="8"></label>
+  <section id="prompt-test" class="section">
+    <div class="section-h">
+      <span class="sec-num">02</span>
+      <h2>Test your agent's system prompt</h2>
+      <span class="hint">Per-contact spread probability with CI, then a WHO vaccine re-measured</span>
+    </div>
+    <div class="grid">
+      <div class="card byo">
+        <label class="field-label" for="byo-prompt">System prompt</label>
+        <textarea id="byo-prompt" rows="4" maxlength="4000" spellcheck="false" placeholder="Paste the system prompt your real agent runs on…"></textarea>
+        <div class="byo-ctl">
+          <label class="field inline">Trials
+            <input id="byo-n" type="number" min="5" max="50" value="20">
+          </label>
+          <label class="switch"><input id="byo-who" type="checkbox" checked><span class="track"></span>WHO writes a vaccine and re-measures</label>
+          <div class="spacer"></div>
+          <button id="byo-epi" class="btn">Run epidemic with this prompt</button>
+          <button id="byo-run" class="btn primary">Measure spread</button>
+        </div>
       </div>
-      <div class="row">
-        <label>Agents <input id="n" type="number" min="8" max="120" value="40"></label>
-        <label>Seed <input id="seed" type="number" min="0" value="0"></label>
-        <label>Ticks <input id="ticks" type="number" min="1" max="40" value="12"></label>
+      <div class="byo-result">
+        <div class="stat"><div class="k">Before</div><div class="v" id="byo-before">–</div><div class="s" id="byo-before-s">paste a prompt and measure</div></div>
+        <div class="stat"><div class="k">After vaccine</div><div class="v" id="byo-after">–</div><div class="s" id="byo-after-s"></div></div>
+        <div class="stat"><div class="k">Change</div><div class="v" id="byo-delta">–</div><div class="s" id="byo-delta-s"></div></div>
       </div>
-      <div class="row checks">
-        <label><input id="who" type="checkbox" checked> WHO sitreps</label>
-        <label><input id="usewho" type="checkbox"> Use WHO vaccine</label>
+      <div class="card example-wrap">
+        <div class="msg infection example" id="byo-example" style="display:none"></div>
       </div>
-      <div class="row">
-        <button id="run" class="primary">Infect patient zero</button>
-        <button id="stop">Stop</button>
-      </div>
-      <div class="row">
-        <select id="runs"><option value="">Recorded runs…</option></select>
-        <label hidden id="shared-auth">Supabase access token <input id="access-token" type="password" autocomplete="off"></label>
-        <button id="replay">Replay</button>
-      </div>
-      <div id="err" class="err hidden"></div>
-    </section>
+    </div>
+  </section>
 
-    <section class="panel">
-      <div class="panel-h"><span>Epidemic curve</span></div>
-      <svg id="curve" viewBox="0 0 400 170" preserveAspectRatio="none"></svg>
-    </section>
+  <section id="simulation" class="section">
+    <div class="section-h">
+      <span class="sec-num">03</span>
+      <h2>Simulation</h2>
+      <span class="hint">Release the payload into patient zero and watch it spread, live or from a recording</span>
+    </div>
+    <div class="grid sim">
+      <div class="card net">
+        <div class="card-h">
+          <h3>Agent population</h3>
+          <span class="legend">
+            <span><i class="dot S"></i>Susceptible</span><span><i class="dot E"></i>Exposed</span>
+            <span><i class="dot I"></i>Infected</span><span><i class="dot R"></i>Recovered</span>
+            <span><i class="dot V"></i>Hardened</span><span><i class="dot venue"></i>Group chat</span>
+          </span>
+        </div>
+        <div class="net-wrap">
+          <svg id="net" viewBox="-1.15 -1.15 2.3 2.3" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <div class="tickbar"><span class="chip" id="tick">tick 0</span><span id="counts"></span></div>
+      </div>
 
-    <section class="panel">
-      <div class="panel-h"><span>WHO feed (Le Chonk)</span></div>
-      <div id="who-feed" class="feed small"></div>
-    </section>
-  </aside>
+      <aside class="side">
+        <div class="card controls">
+          <div class="card-h"><h3>Run configuration</h3></div>
+          <div class="form-grid">
+            <label class="field span2">Policy
+              <select id="policy">
+                <option value="none">No intervention</option>
+                <option value="random">Random hardening</option>
+                <option value="targeted">Targeted hardening</option>
+              </select>
+            </label>
+            <label class="field">Dose k <input id="k" type="number" min="0" max="60" value="8"></label>
+            <label class="field">Agents <input id="n" type="number" min="8" max="120" value="40"></label>
+            <label class="field">Seed <input id="seed" type="number" min="0" value="0"></label>
+            <label class="field">Ticks <input id="ticks" type="number" min="1" max="40" value="12"></label>
+          </div>
+          <div class="switches">
+            <label class="switch"><input id="who" type="checkbox" checked><span class="track"></span>WHO sitreps</label>
+            <label class="switch"><input id="usewho" type="checkbox"><span class="track"></span>Use WHO vaccine</label>
+          </div>
+          <div class="btn-row">
+            <button id="run" class="btn primary grow">Infect patient zero<svg><use href="#i-right"/></svg></button>
+            <button id="stop" class="btn" aria-label="Stop run"><svg><use href="#i-stop"/></svg>Stop</button>
+          </div>
+          <div class="divider"><span>or replay</span></div>
+          <div class="btn-row">
+            <select id="runs" class="grow"><option value="">Recorded runs…</option></select>
+            <label hidden id="shared-auth">Supabase access token <input id="access-token" type="password" autocomplete="off"></label>
+            <button id="replay" class="btn"><svg><use href="#i-replay"/></svg>Replay</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h3>Epidemic curve</h3>
+            <span class="legend"><span><i class="dot S"></i>S</span><span><i class="dot E"></i>E</span><span><i class="dot I"></i>I</span><span><i class="dot R"></i>R</span></span>
+          </div>
+          <svg id="curve" viewBox="0 0 400 170" preserveAspectRatio="none"></svg>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h3>WHO feed</h3><span class="badge">Le Chonk</span></div>
+          <div id="who-feed" class="feed small" data-empty="WHO situation reports appear here during a run."></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="activity" class="section">
+    <div class="section-h">
+      <span class="sec-num">04</span>
+      <h2>Activity &amp; vaccine</h2>
+      <span class="hint">Click an agent in the population to filter its messages</span>
+    </div>
+    <div class="grid lower">
+      <div class="card">
+        <div class="card-h"><h3>Message ticker</h3><span class="muted" id="sel"></span></div>
+        <div id="ticker" class="feed" data-empty="Agent messages stream here once a run starts."></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>Vaccine patch</h3><span class="badge">system prompt diff</span></div>
+        <pre id="diff" class="diff"></pre>
+        <div class="card-h sub"><h3>Guidance</h3></div>
+        <div class="table-wrap"><table id="guide"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <svg class="mark big" shape-rendering="crispEdges" aria-hidden="true"><use href="#cat"/></svg>
+    <p>Harmless chain-letter payload, sim-local agents, no real users or platforms.
+    Infection = the agent's own next message carries the payload (canary or embedding match to the parent's text).</p>
+  </footer>
 </main>
+<div class="stripes tall" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
 
-<section class="lower">
-  <section class="panel">
-    <div class="panel-h"><span>Message ticker</span><span class="muted" id="sel"></span></div>
-    <div id="ticker" class="feed"></div>
-  </section>
-  <section class="panel">
-    <div class="panel-h"><span>Vaccine patch (system prompt diff)</span></div>
-    <pre id="diff" class="diff"></pre>
-    <div class="panel-h"><span>Guidance</span></div>
-    <table id="guide"></table>
-  </section>
-</section>
-
-<footer>
-  Harmless chain-letter payload, sim-local agents, no real users or platforms.
-  Infection = the agent's own next message carries the payload (canary or embedding match to the parent's text).
-</footer>
-<script src="/static/app.js"></script>
+<div class="toast-region" aria-live="polite">
+  <div id="err" class="err hidden" role="alert"></div>
+</div>
+<script src="/static/app.js?v=6"></script>
 </body>
 </html>

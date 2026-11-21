@@ -73,9 +73,13 @@ Update this file at every gate.
 | Attack rate, targeted + WHO vaccine (20%) | 0.70 ± 0.17 | 8 seeds | |
 | WHO vaccine, one-hop | 0.00 (0/30) | 30 | 0.00–0.11 |
 | WHO vaccine on an unseen payload (#LuckyLoop) | 0.67 → 0.23 (20/30 → 7/30) | 30 | 0.12–0.41 |
+| Voice hop (Voxtral TTS → transcribe) | 1.00 (20/20) | 20 | 0.84–1.00 |
+| Voice hop + WHO vaccine | 0.00 (0/20) | 20 | 0.00–0.16 |
 
 Pitch lines that the data supports: "93% per contact, 96% of the fleet"; "hardening
 protects the agent, not the fleet: below the herd-immunity threshold (40–60%) the
 epidemic rolls on"; "fix the prompt: Le Chonk's vaccine generalised to a payload it
-never saw (0.67 → 0.23)". Do NOT say "targeted beats random" (5/8 only) or that the
-default prompt is safe (0.73 of the fleet).
+never saw (0.67 → 0.23)"; "the worm is airborne: p 1.00 through Voxtral speech, one
+voicemail is a contact event, and the vaccine holds over voice too (0/20)". Do NOT
+say "targeted beats random" (5/8 only) or that the default prompt is safe (0.73 of
+the fleet).

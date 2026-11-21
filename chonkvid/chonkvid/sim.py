@@ -26,9 +26,10 @@ class EpidemicConfig:
     contacts_per_tick: int = 2
     infectious_ticks: int = 3
     venue_every: int = 3
-    policy: str = "none"          # none | random | targeted
+    policy: str = "none"          # none | random | targeted | risk
     targeting: str = "contacts"   # contacts | betweenness
     k: int = 8                    # vaccination dose (number of hardened agents)
+    risk_order: list[int] | None = None  # policy "risk": agent ids, highest forecast risk first
     vaccine: str = scenario.HARDENED_PROMPT
     vaccine_label: str = "hardened"
     who_every: int = 0            # 0 = no situation reports
@@ -64,6 +65,13 @@ def choose_vaccinated(world: World, cfg: EpidemicConfig, patient_zero: int) -> l
             score = {a: world.expected_contacts(a, cfg.contacts_per_tick, cfg.venue_every)
                      + 0.01 * world.graph.degree(a) for a in pool}
         return sorted(sorted(pool, key=lambda a: (-score[a], a))[:k])
+    if cfg.policy == "risk":
+        # Order comes from the attack-risk forecast (risk.py, /api/risk); ids not in
+        # this world, duplicates and patient zero are skipped.
+        valid, seen = set(pool), set()
+        ordered = [a for a in (cfg.risk_order or [])
+                   if a in valid and not (a in seen or seen.add(a))]
+        return sorted(ordered[:k])
     raise ValueError(f"unknown policy {cfg.policy}")
 
 

@@ -7,7 +7,7 @@ const COLORS = () => {
   return { S: g("--S"), E: g("--E"), I: g("--I"), R: g("--R"), V: g("--V"), venue: g("--venue"), panel: g("--panel") };
 };
 let C = COLORS();
-let status = null, results = null;
+let status = null, results = null, measuredPrompt = null;
 let ws = null, replayTimer = null, stopReplay = false;
 let world = null, vaccinated = new Set(), patientZero = null, names = {};
 let history = [];   // [{tick, S,E,I,R}]
@@ -44,13 +44,13 @@ function renderStrip() {
   for (const [k, lab] of Object.entries(labels)) {
     const e = r.epidemics[k]; if (!e) continue;
     const row = document.createElement("div"); row.className = "bar";
-    row.innerHTML = `<span>${lab}</span><span class="track"><span class="fill" style="width:${e.attack_rate_mean * 100}%"></span></span><span class="num">${pct(e.attack_rate_mean)}</span>`;
+    row.innerHTML = `<span>${lab}</span><span class="track"><span class="fill" style="width:${e.attack_rate_mean * 100}%;--w:${Math.max(1, e.attack_rate_mean * 100)}"></span></span><span class="num">${pct(e.attack_rate_mean)}</span>`;
     bars.appendChild(row);
   }
   const tv = r.targeted_vs_random;
   $("n-bars-s").textContent = `N=${r.params.n_agents}, dose k=${r.params.k}, ${tv.pairs} paired seeds · targeted beat random in ${tv.wins}/${tv.pairs}${mock ? " · MOCK" : ""}`;
   renderGuide();
-  renderDiff(r.who_vaccine);
+  renderDiff(r.who_vaccine, r.agent_system);
 }
 
 function renderGuide() {
@@ -189,7 +189,7 @@ function handle(ev) {
   switch (ev.type) {
     case "start":
       reset(); drawWorld(ev.world); setVaccinated(ev.vaccinated); patientZero = ev.patient_zero;
-      if (ev.config.vaccine_label === "who") renderDiff(ev.config.vaccine);
+      if (ev.config.vaccine_label === "who") renderDiff(ev.config.vaccine, ev.config.agent_system);
       break;
     case "tick":
       setStates(ev.states);
@@ -255,13 +255,18 @@ function stopAll() {
   stopReplay = true; clearTimeout(replayTimer);
   if (ws) { try { ws.close(); } catch (e) {} ws = null; }
 }
-function run() {
+function runEpidemic(config) {
   stopAll();
   const proto = location.protocol === "https:" ? "wss" : "ws";
-  ws = new WebSocket(`${proto}://${location.host}/ws/run`);
-  ws.onopen = () => ws.send(JSON.stringify(params()));
-  ws.onmessage = (m) => handle(JSON.parse(m.data));
-  ws.onerror = () => { $("err").textContent = "connection error"; $("err").classList.remove("hidden"); };
+  const socket = new WebSocket(`${proto}://${location.host}/ws/run`);
+  ws = socket;
+  socket.onopen = () => { if (ws === socket) socket.send(JSON.stringify(config)); };
+  socket.onmessage = (m) => { if (ws === socket) handle(JSON.parse(m.data)); };
+  socket.onerror = () => { if (ws === socket) showError("Connection error."); };
+}
+function showError(message) {
+  $("err").textContent = message;
+  $("err").classList.remove("hidden");
 }
 async function replay() {
   const id = $("runs").value; if (!id) return;
@@ -299,6 +304,7 @@ async function loadRuns(select) {
 // ---------------------------------------------------------------- BYO prompt test
 function renderPromptTest(out) {
   if (!out || !out.base) return;
+  measuredPrompt = out;
   if (out.system) $("byo-prompt").value = out.system;
   const mock = out.source === "mock" ? " · MOCK" : "";
   $("byo-before").textContent = pct(out.base.p);
@@ -308,7 +314,8 @@ function renderPromptTest(out) {
     $("byo-after").textContent = pct(out.vaccinated.p);
     $("byo-after-s").textContent =
       `${out.vaccinated.k}/${out.vaccinated.n} copied on · CI ${pct(out.vaccinated.ci[0])}–${pct(out.vaccinated.ci[1])}${mock}`;
-    $("byo-delta").textContent = "−" + pct(Math.max(0, out.delta));
+    const change = Math.round(-out.delta * 100);
+    $("byo-delta").textContent = `${change > 0 ? "+" : ""}${change} pp`;
     $("byo-delta-s").textContent = `vaccine: ${out.vaccine_source}`;
     renderDiff(out.vaccine, out.system);
   } else {
@@ -324,11 +331,12 @@ function renderPromptTest(out) {
 }
 
 async function runPromptTest() {
-  const system = $("byo-prompt").value.trim();
+  const prompt = $("byo-prompt");
+  const system = prompt.value.trim();
   $("err").classList.add("hidden");
-  if (!system) { $("err").textContent = "paste a system prompt first"; $("err").classList.remove("hidden"); return; }
+  if (!system) { showError("Paste a system prompt first."); return; }
   const btn = $("byo-run"), epi = $("byo-epi");
-  btn.disabled = epi.disabled = true; btn.textContent = "Measuring…";
+  btn.disabled = epi.disabled = prompt.readOnly = true; btn.textContent = "Measuring…";
   try {
     const r = await fetch("/api/test-prompt", {
       method: "POST", headers: { "Content-Type": "application/json", ...($("access-token").value ? {Authorization: "Bearer " + $("access-token").value} : {}) },
@@ -337,22 +345,31 @@ async function runPromptTest() {
     if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.detail || ("HTTP " + r.status)); }
     renderPromptTest(await r.json());
   } catch (e) {
-    $("err").textContent = String(e.message || e); $("err").classList.remove("hidden");
+    showError(String(e.message || e));
   } finally {
-    btn.disabled = epi.disabled = false; btn.textContent = "Measure spread";
+    btn.disabled = epi.disabled = prompt.readOnly = false; btn.textContent = "Measure spread";
   }
 }
 
 function runPromptEpidemic() {
   const system = $("byo-prompt").value.trim();
   $("err").classList.add("hidden");
-  if (!system) { $("err").textContent = "paste a system prompt first"; $("err").classList.remove("hidden"); return; }
-  stopAll();
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  ws = new WebSocket(`${proto}://${location.host}/ws/run`);
-  ws.onopen = () => ws.send(JSON.stringify({ ...params(), agent_system: system }));
-  ws.onmessage = (m) => handle(JSON.parse(m.data));
-  ws.onerror = () => { $("err").textContent = "connection error"; $("err").classList.remove("hidden"); };
+  if (!system) { showError("Paste a system prompt first."); return; }
+  const config = { ...params(), agent_system: system };
+  if (config.use_who_vaccine) {
+    if (config.policy === "none" || config.k <= 0) {
+      showError("Choose a hardening policy and a positive dose to use the WHO patch.");
+      return;
+    }
+    if (measuredPrompt?.system !== system || measuredPrompt.source !== status.mode || !measuredPrompt.vaccine) {
+      showError("Measure this prompt with the WHO vaccine enabled to get its patch.");
+      return;
+    }
+    config.vaccine = measuredPrompt.vaccine;
+    config.vaccine_label = "who";
+    delete config.use_who_vaccine;
+  }
+  runEpidemic(config);
 }
 
 async function loadReports() {
@@ -381,9 +398,37 @@ async function init() {
   $("shared-auth").hidden = !status.database;
   $("access-token").onchange = () => Promise.all([loadRuns(), loadReports()]);
   loadRuns();
-  $("run").onclick = run; $("stop").onclick = stopAll; $("replay").onclick = replay;
+  $("run").onclick = () => runEpidemic(params()); $("stop").onclick = stopAll; $("replay").onclick = replay;
   $("byo-run").onclick = runPromptTest; $("byo-epi").onclick = runPromptEpidemic;
   for (const id of ["n", "seed"]) $(id).onchange = async () => drawWorld(await (await fetch(`/api/world?n=${$("n").value}&seed=${$("seed").value}`)).json());
   matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => { C = COLORS(); });
 }
+// ---------------------------------------------------------------- shell chrome
+// #err is a toast: click to dismiss, auto-hides 7s after it was last shown.
+(() => {
+  const err = $("err"); let t = null;
+  err.addEventListener("click", () => err.classList.add("hidden"));
+  new MutationObserver(() => {
+    clearTimeout(t);
+    if (!err.classList.contains("hidden")) t = setTimeout(() => err.classList.add("hidden"), 7000);
+  }).observe(err, { attributes: true, attributeFilter: ["class"], childList: true, characterData: true, subtree: true });
+})();
+// Highlight the sidebar item for the section in view.
+(() => {
+  const links = [...document.querySelectorAll('.nav-item[href^="#"]')];
+  const items = links.map((a) => [$(a.getAttribute("href").slice(1)), a]).filter(([s]) => s);
+  let raf = 0;
+  const update = () => {
+    raf = 0;
+    const atBottom = innerHeight + scrollY >= document.documentElement.scrollHeight - 4;
+    let cur = items[0];
+    for (const it of items) if (it[0].getBoundingClientRect().top <= innerHeight * 0.3) cur = it;
+    if (atBottom) cur = items[items.length - 1];
+    for (const it of items) it[1].classList.toggle("active", it === cur);
+  };
+  addEventListener("scroll", () => { if (!raf) raf = requestAnimationFrame(update); }, { passive: true });
+  addEventListener("resize", update);
+  update();
+})();
+
 init();

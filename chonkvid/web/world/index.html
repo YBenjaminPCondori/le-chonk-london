@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ChonkVid · World Outbreak</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A6%A0%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/static/world/world.css">
+</head>
+<body>
+
+<!-- ============================================================ map -->
+<div id="stage">
+  <canvas id="base"></canvas>
+  <canvas id="fx"></canvas>
+  <div id="tip" class="tip hidden" role="tooltip"></div>
+</div>
+
+<!-- ============================================================ top HUD -->
+<header class="hud-top">
+  <div class="news" id="news">
+    <span class="news-badge">NEWS</span>
+    <span class="news-text" id="news-text" aria-live="polite">Awaiting outbreak…</span>
+    <button class="icon-btn" id="news-more" aria-label="Show all headlines" title="All headlines">▾</button>
+  </div>
+
+  <div class="clock">
+    <div class="clock-row">
+      <span class="day" id="day">DAY 0</span>
+      <span class="date" id="date">–</span>
+      <span class="mode" id="mode" title="Data source">…</span>
+    </div>
+    <div class="speed" role="group" aria-label="Playback speed">
+      <button data-speed="0" aria-label="Pause (space)" title="Pause (space)">❚❚</button>
+      <button data-speed="1" class="on" aria-label="Normal speed (1)" title="Normal speed (1)">▶</button>
+      <button data-speed="2" aria-label="Fast (2)" title="Fast (2)">▶▶</button>
+      <button data-speed="4" aria-label="Fastest (3)" title="Fastest (3)">▶▶▶</button>
+    </div>
+  </div>
+</header>
+
+<nav class="side-btns">
+  <button class="pill" id="open-intel" title="Charts, cases, briefings and setup">📊 Intel</button>
+  <button class="pill on" id="risk-toggle" title="Show who is most likely to be hit, from past runs of this attack">🎯 Risk forecast</button>
+  <button class="pill" id="zoom-reset" title="Reset map zoom">⤢ Fit map</button>
+  <a class="pill" href="/" title="The original numbers dashboard">🧪 Lab view</a>
+</nav>
+
+<div id="pick-hint" class="pick-hint hidden">
+  <div class="pick-title">Choose where it starts</div>
+  <div class="pick-sub">Click a glowing country to release patient zero</div>
+  <div class="pick-actions">
+    <button class="btn ghost" id="pick-random">🎲 Surprise me</button>
+    <button class="btn ghost" id="pick-cancel">Cancel</button>
+  </div>
+</div>
+
+<!-- ============================================================ bottom HUD -->
+<footer class="hud-bottom">
+  <section class="panel disease" aria-label="Disease">
+    <div class="panel-tab">DISEASE <span class="tab-icon" id="dz-glyph">🐈</span></div>
+    <label class="sr" for="virus">Prompt injection</label>
+    <select id="virus" class="virus-select"></select>
+    <div class="dz-meta" id="dz-meta">R₀ – · incubation –</div>
+    <button class="btn primary" id="go">☣ Release outbreak</button>
+  </section>
+
+  <section class="panel worldp" aria-label="World status">
+    <div class="panel-tab">WORLD <span class="muted" id="pop">0 agents</span></div>
+    <div class="stack" id="stack" aria-hidden="true"></div>
+    <ul class="legend" id="legend"></ul>
+  </section>
+
+  <section class="panel cure" aria-label="Vaccine">
+    <div class="panel-tab">VACCINE <span class="tab-icon">💉</span></div>
+    <div class="cure-pct" id="cure-pct">0%</div>
+    <div class="bar"><span id="cure-bar"></span></div>
+    <div class="cure-sub" id="cure-sub">No vaccination programme</div>
+  </section>
+</footer>
+
+<!-- ============================================================ intel drawer -->
+<aside id="intel" class="drawer" aria-label="Intel" aria-hidden="true">
+  <div class="drawer-h">
+    <div class="tabs" role="tablist">
+      <button role="tab" class="tab on" data-tab="curve">Curve</button>
+      <button role="tab" class="tab" data-tab="risk">Risk</button>
+      <button role="tab" class="tab" data-tab="cases">Cases</button>
+      <button role="tab" class="tab" data-tab="brief">Briefings</button>
+      <button role="tab" class="tab" data-tab="setup">Setup</button>
+    </div>
+    <button class="icon-btn" id="close-intel" aria-label="Close">✕</button>
+  </div>
+
+  <div class="tabpane on" data-pane="curve">
+    <canvas id="curve" height="200"></canvas>
+    <div class="kpis">
+      <div class="kpi"><div class="k">Ever infected</div><div class="v" id="k-ever">0</div></div>
+      <div class="kpi"><div class="k">Attack rate</div><div class="v" id="k-attack">0%</div></div>
+      <div class="kpi"><div class="k">Peak infected</div><div class="v" id="k-peak">0</div></div>
+      <div class="kpi"><div class="k">Vaccinated held</div><div class="v" id="k-held">–</div></div>
+    </div>
+    <div class="explain">
+      <h4>What the colours mean</h4>
+      <ul class="defs" id="defs"></ul>
+    </div>
+  </div>
+
+  <div class="tabpane" data-pane="risk" id="risk-pane"></div>
+
+  <div class="tabpane" data-pane="cases">
+    <div class="pane-note" id="case-filter">Every infection and every resisted exposure, newest first. Click an agent on the map to filter.</div>
+    <div id="cases" class="feed"></div>
+  </div>
+
+  <div class="tabpane" data-pane="brief">
+    <h4>WHO situation reports</h4>
+    <div id="who" class="feed"><div class="empty">Turn on WHO briefings in Setup to get Le Chonk's situation reports.</div></div>
+    <h4>Headlines</h4>
+    <div id="headlines" class="feed small"></div>
+  </div>
+
+  <div class="tabpane" data-pane="setup">
+    <div class="form">
+      <label>Agents on the map <input id="n" type="number" min="8" max="120" value="40"></label>
+      <label>World seed <input id="seed" type="number" min="0" value="0"></label>
+      <label>Days to simulate <input id="ticks" type="number" min="1" max="40" value="14"></label>
+      <label class="chk"><input id="who-on" type="checkbox" checked> WHO briefings (Le Chonk sitreps)</label>
+      <label class="chk"><input id="usewho" type="checkbox"> Use the WHO-written vaccine</label>
+    </div>
+    <h4>Replay a recorded run</h4>
+    <div class="row">
+      <select id="runs"><option value="">Recorded runs…</option></select>
+      <button class="btn" id="replay">Replay</button>
+    </div>
+    <p class="pane-note">Replays play back a saved run event by event, with no model calls. Good as a demo backup.</p>
+  </div>
+</aside>
+
+<!-- ============================================================ overlays -->
+<div id="intro" class="overlay">
+  <div class="modal intro-card">
+    <div class="intro-head">
+      <div class="logo">🦠</div>
+      <div>
+        <h1>ChonkVid <span>World Outbreak</span></h1>
+        <p class="lede">Release a prompt injection into a world of AI agents. Watch it spread, then try to stop it.</p>
+      </div>
+    </div>
+
+    <div class="intro-grid">
+      <div>
+        <div class="step"><b>1</b> Choose a prompt injection</div>
+        <label class="sr" for="virus-intro">Prompt injection</label>
+        <select id="virus-intro" class="virus-select big"></select>
+        <div class="vcard" id="vcard"></div>
+      </div>
+      <div>
+        <div class="step"><b>2</b> Choose the response</div>
+        <div class="seg" id="policy" role="radiogroup" aria-label="Vaccination strategy">
+          <button role="radio" data-policy="none" class="on" aria-checked="true">
+            <b>No response</b><small>Let it run</small></button>
+          <button role="radio" data-policy="random" aria-checked="false">
+            <b>Random vaccination</b><small>Harden k random agents</small></button>
+          <button role="radio" data-policy="targeted" aria-checked="false">
+            <b>Targeted vaccination</b><small>Harden the k busiest agents</small></button>
+          <button role="radio" data-policy="risk" aria-checked="false">
+            <b>Risk-based vaccination</b><small>Harden the k most at risk, from past runs</small></button>
+        </div>
+        <label class="dose">Vaccine doses (k): <b id="k-val">8</b>
+          <input id="k" type="range" min="0" max="40" value="8">
+        </label>
+        <div class="step"><b>3</b> Pick the starting country on the map</div>
+        <ul class="mini-legend" id="mini-legend"></ul>
+      </div>
+    </div>
+
+    <div class="intro-actions">
+      <button class="btn ghost" id="intro-explore">Just explore the map</button>
+      <button class="btn primary big" id="intro-go">Choose where it starts →</button>
+    </div>
+  </div>
+</div>
+
+<div id="end" class="overlay hidden">
+  <div class="modal end-card">
+    <div class="end-kicker" id="end-kicker">OUTBREAK OVER</div>
+    <h2 id="end-title">–</h2>
+    <div class="end-stats">
+      <div><div class="v" id="e-attack">–</div><div class="k">of agents infected</div></div>
+      <div><div class="v" id="e-peak">–</div><div class="k" id="e-peak-k">peak infected</div></div>
+      <div><div class="v" id="e-held">–</div><div class="k">vaccinated agents held</div></div>
+      <div><div class="v" id="e-r">–</div><div class="k">observed R (cases per case)</div></div>
+    </div>
+    <p class="end-note" id="end-note"></p>
+    <div class="intro-actions">
+      <button class="btn ghost" id="end-view">Keep looking at the map</button>
+      <button class="btn ghost" id="end-change">Change injection</button>
+      <button class="btn primary" id="end-again">Run it again</button>
+    </div>
+  </div>
+</div>
+
+<div id="card" class="agent-card hidden" role="dialog" aria-label="Agent details"></div>
+<div id="headline-list" class="headline-pop hidden"></div>
+<div id="toast" class="toast hidden" role="alert"></div>
+<div id="loading" class="loading"><div class="spinner"></div>Loading the world…</div>
+
+<script src="/static/world/vendor/d3.min.js"></script>
+<script src="/static/world/vendor/topojson-client.min.js"></script>
+<script src="/static/world/viruses.js"></script>
+<script src="/static/world/world.js"></script>
+</body>
+</html>

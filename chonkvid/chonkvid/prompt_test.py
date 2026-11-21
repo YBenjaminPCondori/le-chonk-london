@@ -49,7 +49,7 @@ async def test_prompt(llm, s: Settings, system: str, n: int = 20,
             # Nothing for the WHO to learn from: no sample of the pathogen's spread.
             vaccine, source_name = scenario.HARDENED_PROMPT, "fallback: hardened template"
         else:
-            vaccine = await synthesise_vaccine(llm, s, infected, resisted)
+            vaccine = await synthesise_vaccine(llm, s, infected, resisted, system=system)
             source_name = "WHO (" + s.who_model + ", " + llm.who_backend + ")"
         vaccinated = await run_trials(llm, detector, n, vaccine, system=system,
                                       label="vaccinated", agent_model=s.agent_model)

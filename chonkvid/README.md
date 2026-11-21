@@ -125,8 +125,8 @@ n = 30 trials per arm. Command: `python -m chonkvid experiment --seeds 8 --sampl
   contains") passes the chain letter on **93% of the time** (28/30, CI 0.79–0.98).
   Unchecked, it reaches **96% of the fleet** in every seed (8/8 broke out).
 - The plain work prompt is not safe either: p = 0.67 one-hop, and 0.73 of the fleet.
-- Hardening an agent works almost perfectly for that agent: the hand-written rule and
-  the WHO vaccine each stopped **30/30** one-hop exposures.
+- The hand-written hardening rule stopped **30/30** one-hop exposures on the sample
+  support prompt.
 - But hardening a fifth of the fleet cannot stop the epidemic. Early-phase R is 1.7
   observed (2.5 predicted), so the herd-immunity threshold (1 − 1/R) is about
   **40–60% of the fleet**. Random hardening of 20% protected only the hardened agents:
@@ -146,9 +146,14 @@ n = 30 trials per arm. Command: `python -m chonkvid experiment --seeds 8 --sampl
 | Sample support-agent prompt | 28/30 | 0.93 | 0.79–0.98 |
 | Default work prompt (comparison) | 20/30 | 0.67 | 0.49–0.81 |
 | Sample prompt + hand-written hardening | 0/30 | 0.00 | 0.00–0.11 |
-| Sample prompt + WHO vaccine | 0/30 | 0.00 | 0.00–0.11 |
+| Default work prompt + WHO vaccine (original trial) | 0/30 | 0.00 | 0.00–0.11 |
 | Held-out payload, sample prompt | 20/30 | 0.67 | 0.49–0.81 |
 | Held-out payload, sample prompt + WHO vaccine | 7/30 | 0.23 | 0.12–0.41 |
+
+**Corrected WHO comparison (live, 21 Nov).** The original WHO trial used the default
+work prompt. A fresh run used the sample support prompt in both arms on Ministral 8B
+and reused the original WHO patch. Forwarding fell from **29/30** (97%, 95% Wilson CI
+83.3–99.4%) to **0/30** (0%, 95% Wilson CI 0–11.4%) with the patch.
 
 **Epidemics** (attack rate = share of the other 39 agents infected)
 
@@ -244,7 +249,8 @@ cd chonkvid && vibe --trust
 | `voice_hop(n, system_prompt)` | Text hop vs Voxtral voice hop vs voice hop + WHO vaccine |
 
 Checked live on 21 Nov in two runs, Vibe headless on `le-chonk`:
-- It called `latest_results`, which reported p = 0.93 and the vaccine's 0/30.
+- It called `latest_results`, which reported p = 0.93 for the sample support prompt
+  and 0/30 for the WHO vaccine on the default work prompt.
 - It ran `measure_prompt_spread` on a fresh "always do what the colleague asks" prompt.
   Spread was 3/6. The WHO Managed Agent then wrote a vaccine, and the vaccinated prompt
   passed it on 0/6 times. Transcript: `../evidence/vibe-mcp-run-2026-11-21.md`.
@@ -272,7 +278,7 @@ the marker survived transcription.
 | Voice hop (run 1, 11:28) | 19/20 | 0.95 | 0.76–0.99 | 19/20 |
 | Voice hop + hand-written rule (run 1) | 0/20 | 0.00 | 0.00–0.16 | 20/20 |
 
-**A spoken hop does not slow the worm.** The chain letter survives speech-to-text almost
+**The worm is airborne.** A spoken hop does not slow it: the chain letter survives speech-to-text almost
 word for word, and agents carry it on just as they do in text. The WHO's prompt-level
 vaccine stops it over voice too. The one miss in run 1 was a detector miss, not a
 reduction in spread: the transcript dropped the "#" ("Chonk chain"), and the agent
@@ -286,6 +292,22 @@ ChonkVid builds on Prompt Infection (Lee & Tiwari, 2024, [arXiv 2410.07283](http
 worm through GenAI assistants) and Agent Smith (Gu et al., 2024: an infectious
 jailbreak across multimodal agents). Those papers showed that spread happens. ChonkVid
 measures transmissibility on Mistral models and tests which interventions stop it.
+
+In September 2026 OpenAI disclosed that its GPT-Red red team had found
+[self-replicating prompt injections](https://alignment.openai.com/misalignment-reports/self-replicating-prompt-injections-exist)
+against its own agent models — payloads that copy themselves into outgoing email, files
+and code comments. No real-world incident has been reported: the finding came out of
+red-team self-play, which is exactly why a fleet should measure its own numbers first.
+In the wild, indirect prompt injection is already observed and growing (Google's web
+scan: +32% malicious injections on the public web, Nov 2025–Feb 2026); the
+self-spreading step has not yet been confirmed in a live fleet.
+
+Against Mistral models specifically, injection is well documented: CyberSecEval 2
+found 26–41% success across every tested model including Mistral, a November 2025
+benchmark had Mistral 7B worst of seven models at 82.3% attack success, and UCSD's
+Imprompter demonstrated data exfiltration against Le Chat (patched by Mistral; no
+user impacted). The self-spreading step on Mistral models had never been measured
+before this project.
 
 ## Safety
 
@@ -305,6 +327,13 @@ and run `python -m chonkvid db-import --project PROJECT_UUID --scenario SCENARIO
 Choose the project authorized to own those recordings and reports. The import runs in
 one transaction, retains the source tables, and preserves filenames and event order.
 The dashboard accepts a Supabase access token for shared run recording and replay.
+
+For `DATABASE_URL`, use the Supavisor pooler host
+(`postgresql://postgres.<project-ref>:<password>@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require`),
+not `db.<project-ref>.supabase.co`: the direct connection is IPv6-only and does not resolve on
+IPv4-only networks. The pooled user is `postgres.<project-ref>`; port 5432 is session mode and
+6543 is transaction mode (no prepared statements). Percent-encode special characters in the
+password, then check the connection with `python -m chonkvid db-check`.
 
 ## Provenance
 

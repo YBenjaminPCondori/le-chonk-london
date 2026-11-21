@@ -7,6 +7,9 @@ chonkvid/**/*.pyc
 chonkvid/runs/
 chonkvid/results/
 chonkvid/.pytest_cache/
+chonkvid/cloudflare/node_modules/
+.chonkvid-raid/
+_demo-out/
 demo/.env
 demo/_raw/
 demo/_frames*/

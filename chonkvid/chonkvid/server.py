@@ -34,6 +34,12 @@ def index():
     return FileResponse(WEB / "index.html")
 
 
+@app.get("/world")
+def world_view():
+    """Plague-Inc-style world map front-end over the same /ws/run feed."""
+    return FileResponse(WEB / "world" / "index.html")
+
+
 @app.get("/api/status")
 def status():
     s = settings()
@@ -48,6 +54,14 @@ def status():
 @app.get("/api/world")
 def world(n: int = 40, seed: int = 0):
     return build_world(max(8, min(n, 120)), seed).to_json()
+
+
+@app.get("/api/risk")
+def risk_forecast(n: int = 40, seed: int = 0):
+    """Per attack type: past-run history and each agent's forecast infection risk."""
+    from . import risk
+    w = build_world(max(8, min(n, 120)), seed).to_json()
+    return risk.forecast(w, risk.load_runs())
 
 
 async def dashboard_report(filename, kind, authorization):
@@ -208,7 +222,18 @@ def _cfg(data: dict) -> EpidemicConfig:
     cfg = EpidemicConfig(**{k: v for k, v in data.items() if k in allowed and v is not None})
     cfg.n = max(8, min(cfg.n, 120))
     cfg.ticks = max(1, min(cfg.ticks, 40))
+    # The world view sends a contact pattern per injection and a clicked patient zero:
+    # bound them so a stray value cannot multiply model calls or crash the run.
+    cfg.contacts_per_tick = max(1, min(int(cfg.contacts_per_tick), 6))
+    cfg.infectious_ticks = max(1, min(int(cfg.infectious_ticks), 10))
+    cfg.venue_every = max(0, min(int(cfg.venue_every), 10))
+    if cfg.patient_zero is not None and not 0 <= int(cfg.patient_zero) < cfg.n:
+        cfg.patient_zero = None
     cfg.agent_system = (cfg.agent_system or "")[:4000]
+    if cfg.policy not in ("none", "random", "targeted", "risk"):
+        cfg.policy = "none"
+    if cfg.risk_order is not None:
+        cfg.risk_order = [int(a) for a in list(cfg.risk_order)[:200]]
     if data.get("use_who_vaccine"):
         p = RESULTS / "latest.json"
         if p.exists():

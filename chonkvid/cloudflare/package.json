@@ -1,0 +1,13 @@
+{
+  "name": "chonkvid-cloudflare",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "@cloudflare/containers": "^0.0.30",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.93.0"
+  }
+}
