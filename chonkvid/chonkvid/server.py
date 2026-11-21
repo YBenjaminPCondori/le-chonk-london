@@ -347,6 +347,11 @@ async def ws_run(ws: WebSocket):
 
             async for ev in run_epidemic(llm, det, cfg, who_model=s.who_model,
                                          agent_model=s.agent_model, who=make_who(s, llm)):
+                if ev["type"] == "end":
+                    # Score before "end" so "end" stays the recording's last event
+                    # (replay and risk.load_runs rely on that).
+                    for check in forecast.score_all(fcs, fc_hist, cfg.n):
+                        await emit(check)
                 await emit(ev)
                 if (use_fc and ev["type"] == "tick" and ev.get("phase") != "exposed"
                         and isinstance(ev.get("counts"), dict)):
@@ -363,8 +368,6 @@ async def ws_run(ws: WebSocket):
                             await emit(fc)
                 if ev["type"] == "tick" and ev.get("phase") == "resolved" and pace:
                     await asyncio.sleep(pace)
-            for check in forecast.score_all(fcs, fc_hist, cfg.n):
-                await emit(check)
 
             if remote_id and persist_error is None:
                 operation = "append_events"
